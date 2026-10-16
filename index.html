@@ -55,9 +55,6 @@ canvas{max-height:340px}.kpis{display:grid;grid-template-columns:repeat(auto-fit
 <body>
 <div id="app"><nav id="nav"></nav><main id="main"></main></div>
 <div id="toast" class="toast" style="display:none"></div>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 try{if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{})}catch(e){}
 const K="hayot_os_uz_v1",MO=["Yan","Fev","Mar","Apr","May","Iyn","Iyl","Avg","Sen","Okt","Noy","Dek"],DOM=["Sogʻliq","Karyera","Moliya","Bilim","Munosabatlar","Ruhiyat"],W={1:1,2:2,3:3},DN={1:"Oson (1x)",2:"Oʻrta (2x)",3:"Qiyin (3x)"},MOODS=["😞","😕","😐","🙂","😄"];
@@ -92,8 +89,7 @@ function demo(){
  j.forEach((x,i)=>{const k=ds(addD(new Date(),-(i+1)));bio[k]=Object.assign(bio[k]||{mood:4,energy:7,sleep:7,water:7},{wins:x[0],bott:x[1],tom:x[2]})});
  return{goals,habits,logs,bio,focus,tasks:[{id:"t1",t:"Universitet hujjatlarini tekshirish",done:false,h:"h6"},{id:"t2",t:"TOPIK mavzu lugʻatini chiqarish",done:false,h:"h4"},{id:"t3",t:"Seulda yotoqxona variantlarini solishtirish",done:true,h:"h6"}],theme:matchMedia&&matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light"}}
 let FIRST=false,S=(()=>{try{const j=localStorage.getItem(K);if(j)return JSON.parse(j)}catch(e){}FIRST=true;return demo()})(),tab="bosh",cur=TODAY,vw=7,charts=[],hmSel=null,cs=null;
-let cloudUser=null,cloudReady=false,cloudApplying=false,cloudUnsub=null,cloudTimer=null,cloudDb=null,cloudAuth=null;
-const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){};if(!cloudApplying&&cloudReady&&cloudUser)queueCloudSave()};
+const persist=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}},save=()=>{S._ts=Date.now();persist();syQ()};
 const hab=id=>S.habits.find(h=>h.id==id),done=(d,id)=>!!(S.logs[d]&&S.logs[d][id]),bio=d=>S.bio[d]||{};
 function rate(d){let t=0,n=0;S.habits.forEach(h=>{if(!act(h,d)&&!done(d,h.id))return;t+=W[h.d];if(done(d,h.id))n+=W[h.d]});return t?n/t:0}
 function streak(h){let d=new Date(),c=0,g=0;if(!done(ds(d),h.id)&&act(h,ds(d)))d=addD(d,-1);while(g++<500){const k=ds(d);if(done(k,h.id))c++;else if(act(h,k))break;d=addD(d,-1)}return c}
@@ -109,7 +105,7 @@ function toast(t){const e=$("toast");e.textContent=t;e.style.display="block";cle
 const TABS=[["bosh","🏠","Bosh panel"],["bugun","☀️","Bugun"],["maqsad","🎯","Maqsadlar"],["faollik","🔥","Faollik"],["tahlil","📊","Tahlil"],["fokus","⏱️","Fokus"],["moliya","💰","Moliya"],["sharh","📝","Haftalik sharh"],["lugat","🈶","Lugʻat kartalari"],["kitob","📚","Kitob va gʻoyalar"],["yil","🎊","Yillik hisobot"],["oyin","🏆","Oʻyin va Seyf"]];
 function go(t){tab=t;render();scrollTo(0,0)}
 function head(){document.documentElement.dataset.theme=S.theme;const s=stats(),c=60*(s.lv-1)**2,n=60*s.lv**2;
- $("nav").innerHTML="<h1>🧭 Hayot OS</h1>"+`<button class="t" style="border:0;background:var(--cell);color:var(--tx);font:inherit;padding:10px;border-radius:14px;cursor:pointer;text-align:left" onclick="cloudLogin()">${cloudUser?"☁️ Sinxronlangan":"☁️ Google bilan ulash"}</button>`+TABS.map(t=>`<button class="t ${t[0]==tab?"on":""}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join("")+`<button class="t" style="border:0;background:var(--cell);color:var(--tx);font:inherit;padding:12px;border-radius:14px;cursor:pointer;text-align:left" onclick="pal()">🔍 Qidiruv · ⌘K</button><div id="lv"><b>${s.lv}-daraja</b> · ${s.xp} XP<div class="bar" style="margin-top:6px"><i style="width:${(s.xp-c)/(n-c)*100}%"></i></div></div>`}
+ $("nav").innerHTML="<h1>🧭 Hayot OS</h1>"+TABS.map(t=>`<button class="t ${t[0]==tab?"on":""}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join("")+`<button class="t" style="border:0;background:var(--cell);color:var(--tx);font:inherit;padding:12px;border-radius:14px;cursor:pointer;text-align:left" onclick="pal()">🔍 Qidiruv · ⌘K</button><div id="lv"><b>${s.lv}-daraja</b> · ${s.xp} XP<div class="bar" style="margin-top:6px"><i style="width:${(s.xp-c)/(n-c)*100}%"></i></div></div>`}
 function render(){charts.forEach(c=>c.destroy());charts=[];head();const v={bosh:()=>(S.habits.length?"":hint())+vBosh(),lugat:vLugat,kitob:vKitob,yil:vYil,moliya:vMoliya,sharh:vSharh,bugun:vBugun,maqsad:vMaqsad,faollik:vFaollik,tahlil:vTahlil,fokus:vFokus,oyin:vOyin}[tab]();$("main").innerHTML=v;({bosh:cBosh,yil:cYil,moliya:cMoliya,faollik:cFaollik,tahlil:cTahlil}[tab]||(()=>{}))()}
 function mk(id,cfg){if(typeof Chart==="undefined"){$(id).outerHTML='<p class="mu">Grafik kutubxonasi yuklanmadi. Internetga ulanishni tekshiring.</p>';return}
  const st=getComputedStyle(document.documentElement);Chart.defaults.color=S.theme=="dark"?"#aab2d0":"#4a5370";Chart.defaults.borderColor=S.theme=="dark"?"rgba(255,255,255,.08)":"rgba(0,0,0,.07)";charts.push(new Chart($(id),cfg))}
@@ -183,7 +179,7 @@ function dt(id){S.tasks=S.tasks.filter(x=>x.id!=id);save();render()}
 function vOyin(){const s=stats(),c=60*(s.lv-1)**2,n=60*s.lv**2;
  return`<h2>🏆 RPG rivojlanish va maʼlumotlar seyfi</h2><div class="card"><div class="row"><div style="font-size:52px">🧙</div><div class="sp"><h3>${s.lv}-daraja</h3><div class="mu">${s.xp} / ${n} XP · keyingi darajaga ${n-s.xp} XP</div><div class="bar" style="margin-top:6px"><i style="width:${(s.xp-c)/(n-c)*100}%"></i></div></div><button class="b s" onclick="S.theme=S.theme=='dark'?'light':'dark';save();render()">${S.theme=="dark"?"☀️ Yorugʻ":"🌙 Qorongʻi"} mavzu</button></div><p class="mu">XP: odat bajarilishi (10×vazn), fokus (1 XP/daqiqa), kundalik (20 XP). Daraja = ⌊√(XP/60)⌋+1.</p></div>
  <div class="card"><h3>Yutuq nishonlari (${BAD.filter(b=>b[3](s)).length}/${BAD.length})</h3><div class="g2">${BAD.map(b=>`<div class="badge ${b[3](s)?"":"off"}"><span>${b[0]}</span><div><b>${b[1]}</b><div class="mu">${b[2]}</div></div></div>`).join("")}</div></div>
- <div class="card"><h3>💾 JSON zaxira nusxasi</h3><div class="row"><button class="b" onclick="ex()">Eksport</button><label class="b s" style="display:inline-flex;align-items:center">Fayldan import<input type="file" accept=".json,application/json" hidden onchange="imf(this)"></label><button class="b s" onclick="im()">Matndan import</button><button class="b d" onclick="rs()">Demo maʼlumotni tiklash</button><button class="b d" onclick="bl()">🆕 Toza boshlash (0 dan)</button></div><textarea id="jv" style="min-height:150px;margin-top:10px;font-family:monospace;font-size:12px" placeholder="Eksport natijasi shu yerda chiqadi. Import uchun JSON ni shu yerga joylang."></textarea></div>`}
+ <div class="card"><h3>💾 JSON zaxira nusxasi</h3><div class="row"><button class="b" onclick="ex()">Eksport</button><label class="b s" style="display:inline-flex;align-items:center">Fayldan import<input type="file" accept=".json,application/json" hidden onchange="imf(this)"></label><button class="b s" onclick="im()">Matndan import</button><button class="b d" onclick="rs()">Demo maʼlumotni tiklash</button><button class="b d" onclick="bl()">🆕 Toza boshlash (0 dan)</button></div><textarea id="jv" style="min-height:150px;margin-top:10px;font-family:monospace;font-size:12px" placeholder="Eksport natijasi shu yerda chiqadi. Import uchun JSON ni shu yerga joylang."></textarea></div>${syCard()}`}
 function ex(){const j=JSON.stringify(S,null,1);$("jv").value=j;try{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([j],{type:"application/json"}));a.download="hayot-os-"+TODAY+".json";a.click()}catch(e){}try{navigator.clipboard.writeText(j)}catch(e){}toast("Eksport tayyor (matn maydonidan nusxa oling)")}
 function ld(t){try{const o=JSON.parse(t);if(!o.habits||!o.goals||!o.logs)throw 0;S=Object.assign({bio:{},focus:[],tasks:[],fin:[],rev:{},books:[],ideas:[],vocab:[],theme:"light"},o);save();toast("Import muvaffaqiyatli");render()}catch(e){toast("JSON notoʻgʻri formatda")}}
 function im(){ld($("jv").value)}
@@ -274,94 +270,31 @@ function vLugat(){const q=cq(),c=q[0],mt=S.vocab.filter(x=>x.iv>=21).length,sp=n
 function blank(){return{goals:[],habits:[],logs:{},bio:{},focus:[],tasks:[],fin:[],rev:{},books:[],ideas:[],vocab:[],vrev:0,theme:S.theme}}
 function bl(){if(confirm("Barcha maʼlumotlar (demo ham, oʻzingiznikilar ham) oʻchiriladi va ilova 0 dan boshlanadi. Avval Eksport qilib oling. Davom etilsinmi?")){S=blank();save();tab="bosh";render();toast("Ilova 0 dan boshlandi")}}
 function hint(){return`<div class="card"><h3>🚀 Boshlash uchun 3 qadam</h3><p>1) <b>Maqsadlar</b> boʻlimida yillik maqsad qoʻshing (ixtiyoriy).<br>2) <b>Bugun</b> boʻlimida odat qoʻshing va maqsadga bogʻlang.<br>3) Har kuni odatlarni belgilab, bio-jurnalni toʻldiring.</p><div class="row"><button class="b" onclick="go('maqsad')">🎯 Maqsad qoʻshish</button><button class="b s" onclick="go('bugun')">☀️ Odat qoʻshish</button></div></div>`}
-function welcome(){const o=document.createElement("div");o.id="wel";o.style.cssText="position:fixed;inset:0;background:#000b;z-index:30;display:flex;align-items:center;justify-content:center;padding:16px";o.innerHTML='<div class="card" style="max-width:520px;margin:0"><h2>🧭 Hayot OS ga xush kelibsiz</h2><p>Qanday boshlaymiz?</p><button class="b" style="width:100%;margin-bottom:10px" id="wc">☁️ Google orqali kirish va bulutdan tiklash</button><button class="b s" style="width:100%;margin-bottom:10px" id="wd">🧪 Demo maʼlumot bilan — barcha boʻlimlar toʻla koʻrinadi</button><button class="b s" style="width:100%" id="wb">🆕 0 dan boshlash — hammasi boʻsh</button><p class="mu">Avval boshqa qurilmada ishlatgan boʻlsangiz, Google orqali kiring.</p></div>';document.body.appendChild(o);$("wc").onclick=()=>cloudLogin();$("wd").onclick=()=>{save();o.remove()};$("wb").onclick=()=>{S=blank();save();tab="bosh";o.remove();render()}}
+function welcome(){const o=document.createElement("div");o.id="wel";o.style.cssText="position:fixed;inset:0;background:#000b;z-index:30;display:flex;align-items:center;justify-content:center;padding:16px";o.innerHTML='<div class="card" style="max-width:520px;margin:0"><h2>🧭 Hayot OS ga xush kelibsiz</h2><p>Qanday boshlaymiz?</p><button class="b" style="width:100%;margin-bottom:10px" id="wd">🧪 Demo maʼlumot bilan — barcha boʻlimlar toʻla koʻrinadi</button><button class="b s" style="width:100%" id="wb">🆕 0 dan boshlash — hammasi boʻsh</button><p class="mu">Keyinroq ham Oʻyin va Seyf boʻlimidan almashtirish mumkin.</p></div>';document.body.appendChild(o);$("wd").onclick=()=>{save();o.remove()};$("wb").onclick=()=>{S=blank();save();tab="bosh";o.remove();render()}}
+/* ---------- BULUT SINXRONIZATSIYASI (GitHub Gist + shifrlash) ---------- */
+const SK="hayot_sync";let SY=(()=>{try{return JSON.parse(localStorage.getItem(SK)||"null")}catch(e){return null}})(),syT=null,syBusy=false,syMsg="";
+function b64(u){u=new Uint8Array(u);let s="";for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return btoa(s)}
+const ub=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function ckey(pw,salt){const k=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:150000,hash:"SHA-256"},k,{name:"AES-GCM",length:256},false,["encrypt","decrypt"])}
+async function enc(o,pw){const s=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12)),k=await ckey(pw,s),c=await crypto.subtle.encrypt({name:"AES-GCM",iv},k,new TextEncoder().encode(JSON.stringify(o)));return JSON.stringify({v:1,s:b64(s),i:b64(iv),c:b64(c)})}
+async function dec(txt,pw){const o=JSON.parse(txt),k=await ckey(pw,ub(o.s)),p=await crypto.subtle.decrypt({name:"AES-GCM",iv:ub(o.i)},k,ub(o.c));return JSON.parse(new TextDecoder().decode(p))}
+const GH=(path,opt)=>{opt=opt||{};const get=!opt.method;return fetch("https://api.github.com"+path+(get?(path.includes("?")?"&":"?")+"t="+Date.now():""),Object.assign({cache:"no-store"},opt,{headers:Object.assign({Authorization:"Bearer "+SY.token,Accept:"application/vnd.github+json"},opt.headers||{})}))};
+async function syPull(){const r=await GH("/gists/"+SY.gid);if(!r.ok)throw new Error("GitHub "+r.status);const j=await r.json();return dec(j.files["hayot-os.json"].content,SY.pw)}
+async function syPush(){const r=await GH("/gists/"+SY.gid,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({files:{"hayot-os.json":{content:await enc(S,SY.pw)}}})});if(!r.ok)throw new Error("GitHub "+r.status)}
+const hm=()=>" · "+new Date().toLocaleTimeString().slice(0,5);
+function syQ(){if(!SY||!SY.gid)return;clearTimeout(syT);syT=setTimeout(syPushSafe,3000)}
+async function syPushSafe(){if(syBusy)return;syBusy=true;try{await syPush();syMsg="Yuborildi"+hm()}catch(e){syMsg="Xato: "+e.message}syBusy=false}
+async function syAuto(){if(!SY||!SY.gid||syBusy)return;syBusy=true;try{const rem=await syPull();if((rem._ts||0)>(S._ts||0)){S=Object.assign(blank(),rem);persist();render();toast("☁️ Bulutdan yangilandi");syMsg="Bulutdan olindi"+hm()}else if((S._ts||0)>(rem._ts||0)){await syPush();syMsg="Yuborildi"+hm()}else syMsg="Yangi holatda"+hm()}catch(e){syMsg="Xato: "+e.message}syBusy=false;if(tab=="oyin")render()}
+async function syLink(){const token=$("sk").value.trim(),pw=$("sp").value;if(!token||pw.length<6)return toast("Token va kamida 6 belgili parol kiriting");SY={token,pw,gid:null};toast("Ulanmoqda…");
+ try{const r=await GH("/gists?per_page=100");if(!r.ok)throw new Error(r.status==401?"token notoʻgʻri":"GitHub "+r.status);const g=(await r.json()).find(x=>x.description=="hayot-os-sync");
+  if(g){SY.gid=g.id;let rem;try{rem=await syPull()}catch(e){SY=null;return toast("Parol notoʻgʻri yoki maʼlumot buzilgan")}
+   if(confirm("Bulutda maʼlumot topildi.\nOK — bulutdagini shu qurilmaga yuklash (shu qurilmadagi oʻchadi).\nBekor — shu qurilmadagini bulutga yozish.")){S=Object.assign(blank(),rem);persist()}else await syPush()}
+  else{const c=await GH("/gists",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:"hayot-os-sync",public:false,files:{"hayot-os.json":{content:await enc(S,pw)}}})});if(!c.ok)throw new Error("GitHub "+c.status);SY.gid=(await c.json()).id}
+  localStorage.setItem(SK,JSON.stringify(SY));syMsg="Ulandi"+hm();toast("☁️ Ulandi");render()}catch(e){SY=null;toast("Xato: "+e.message)}}
+function syOff(){if(confirm("Sinxronizatsiya shu qurilmada uzilsinmi? Bulutdagi nusxa qoladi.")){SY=null;localStorage.removeItem(SK);render()}}
+function syCard(){return`<div class="card"><h3>☁️ Qurilmalar sinxronizatsiyasi (iPad ↔ telefon)</h3>`+(SY&&SY.gid?`<p>✅ Ulangan. Holat: <b>${esc(syMsg||"—")}</b></p><div class="row"><button class="b" onclick="syAuto()">🔄 Hozir sinxronlash</button><button class="b s" onclick="syOff()">Uzish</button></div><p class="mu">Maʼlumot GitHub hisobingizdagi yashirin Gist'da, parol bilan shifrlangan holda saqlanadi. Bir vaqtda ikkala qurilmada oʻzgartirmang: oxirgi saqlangan versiya gʻalaba qiladi.</p>`:`<p class="mu">1) Safari'da <b>github.com/settings/tokens/new</b> ni oching (Classic token). 2) Note: hayot-os; Expiration: No expiration; faqat <b>gist</b> belgisini yoqing. 3) Generate token → tokenni nusxalang. 4) Tokenni va oʻzingiz oʻylab topgan parolni shu yerga kiriting. Ikkinchi qurilmada <b>bir xil token va parol</b> kiritiladi.</p><div class="row"><input id="sk" type="password" placeholder="GitHub token (ghp_…)" style="flex:1 1 240px"><input id="sp" type="password" placeholder="Shifrlash paroli (6+ belgi)" style="flex:1 1 200px"><button class="b" onclick="syLink()">Ulash</button></div><p class="mu">Parolni unutsangiz, bulutdagi maʼlumotni tiklab boʻlmaydi. Token va parol shu qurilma xotirasida saqlanadi.</p>`)+`</div>`}
 S.fin=S.fin||seedFin();S.rev=S.rev||{};S.books=S.books||seedBooks();S.ideas=S.ideas||seedIdeas();S.vocab=S.vocab||seedVocab();
-
-/* ---------- BULUTLI SINXRONLASH ---------- */
-const firebaseConfig={
-  apiKey:"AIzaSyBH4O6DuOrFUtq-mJLnBM2SfXO8nUpcc6E",
-  authDomain:"salom-os-syns.firebaseapp.com",
-  projectId:"salom-os-syns",
-  storageBucket:"salom-os-syns.firebasestorage.app",
-  messagingSenderId:"478573631727",
-  appId:"1:478573631727:web:8c0317e8f8a3a9f87fe31a",
-  measurementId:"G-VRZMF2LVHQ"
-};
-function cloudInit(){
-  try{
-    if(!window.firebase){toast("Firebase kutubxonasi yuklanmadi. Internetni tekshiring.");return}
-    if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
-    cloudAuth=firebase.auth();cloudDb=firebase.firestore();
-    cloudAuth.getRedirectResult().catch(e=>console.error("Google kirish:",e));
-    cloudAuth.onAuthStateChanged(async user=>{
-      cloudUser=user||null;cloudReady=false;
-      if(cloudUnsub){cloudUnsub();cloudUnsub=null}
-      if(!user){render();return}
-      try{
-        const ref=cloudDb.collection("users").doc(user.uid);
-        const snap=await ref.get();
-        if(snap.exists&&snap.data()&&snap.data().state){
-          cloudApplying=true;S=snap.data().state;
-          try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}
-          cloudApplying=false;cloudReady=true;
-          if($("wel"))$("wel").remove();
-          toast("Bulutdagi maʼlumotlar yuklandi");render();
-        }else{
-          const hasLocal=!!localStorage.getItem(K);
-          if(hasLocal){
-            await ref.set({state:S,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
-            cloudReady=true;toast("Ushbu qurilmadagi maʼlumotlar bulutga saqlandi");
-            if($("wel"))$("wel").remove();render();
-          }else{
-            cloudReady=false;
-            toast("Bulutda hali maʼlumot yoʻq. Avval maʼlumot bor qurilmadan Google orqali kiring.");
-            await cloudAuth.signOut().catch(()=>{});
-            return;
-          }
-        }
-        cloudUnsub=ref.onSnapshot(docSnap=>{
-          if(!docSnap.exists)return;
-          const remote=docSnap.data()?.state;if(!remote)return;
-          let localText="",remoteText="";
-          try{localText=JSON.stringify(S);remoteText=JSON.stringify(remote)}catch(e){}
-          if(remoteText&&remoteText!==localText){
-            cloudApplying=true;S=remote;
-            try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}
-            cloudApplying=false;render();toast("Boshqa qurilmadagi yangilanish olindi");
-          }
-        },err=>{console.error(err);toast("Bulut sinxronlash xatosi: "+err.message)});
-        render();
-      }catch(e){
-        cloudApplying=false;cloudReady=false;console.error("Cloud sync:",e);
-        toast("Sinxronlash xatosi: "+(e.message||"sozlamalarni tekshiring"));render();
-      }
-    });
-  }catch(e){console.error(e);toast("Firebase ishga tushmadi")}
-}
-function cloudLogin(){
-  if(!cloudAuth){toast("Firebase hali yuklanmoqda. Bir oz kutib qayta bosing.");return}
-  if(cloudUser){
-    if(confirm("Google hisobidan chiqilsinmi? Bu qurilmadagi maʼlumotlar saqlanadi.")){
-      cloudReady=false;cloudAuth.signOut().then(()=>toast("Google hisobidan chiqildi")).catch(e=>toast("Chiqishda xato: "+e.message))
-    }
-    return;
-  }
-  const provider=new firebase.auth.GoogleAuthProvider();
-  provider.setCustomParameters({prompt:"select_account"});
-  cloudAuth.signInWithRedirect(provider).catch(e=>toast("Google orqali kirishda xato: "+e.message));
-}
-function queueCloudSave(){
-  if(cloudTimer)clearTimeout(cloudTimer);
-  cloudTimer=setTimeout(async()=>{
-    if(!cloudReady||!cloudUser||!cloudDb||cloudApplying)return;
-    try{
-      await cloudDb.collection("users").doc(cloudUser.uid).set({
-        state:S,updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-      });
-    }catch(e){console.error("Cloud save:",e);toast("Bulutga saqlanmadi: "+(e.message||"xato"))}
-  },700);
-}
-render();if(FIRST)welcome();cloudInit();
+render();if(FIRST)welcome();syAuto();document.addEventListener("visibilitychange",()=>{if(!document.hidden)syAuto()});
 </script>
 </body>
 </html>
